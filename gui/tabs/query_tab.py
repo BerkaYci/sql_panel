@@ -418,6 +418,7 @@ class QueryTab:
         )
 
         if file_path:
+            self.main.update_status(f"{ICONS['info']} Excel aktarımı başlatılıyor...", COLORS['warning'])
             success, message = ExcelHandler.export_to_excel(
                 self.current_results['rows'],
                 self.current_results['columns'],
@@ -428,8 +429,10 @@ class QueryTab:
             if success:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı",
                                   f"{message}\n📈 {len(self.current_results['rows']):,} satır")
+                self.main.update_status(f"{ICONS['success']} Excel'e aktarıldı", COLORS['success'])
             else:
                 messagebox.showerror(f"{ICONS['error']} Hata", message)
+                self.main.update_status(f"{ICONS['error']} Excel aktarımı başarısız", COLORS['danger'])
 
     def save_query(self):
         """Sorguyu dosyaya kaydet - AYNEN KALIYOR"""
@@ -447,6 +450,7 @@ class QueryTab:
         if file_path:
             try:
                 from datetime import datetime
+                self.main.update_status(f"{ICONS['info']} Sorgu dosyaya kaydediliyor...", COLORS['warning'])
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(f"-- SQL Sorgusu\n")
                     f.write(f"-- Oluşturulma: {datetime.now()}\n")
@@ -455,9 +459,11 @@ class QueryTab:
 
                 messagebox.showinfo(f"{ICONS['success']} Başarılı",
                                   f"Sorgu kaydedildi:\n{file_path}")
+                self.main.update_status(f"{ICONS['success']} Sorgu kaydedildi", COLORS['success'])
             except Exception as e:
                 messagebox.showerror(f"{ICONS['error']} Hata",
                                    f"Kaydetme hatası:\n{str(e)}")
+                self.main.update_status(f"{ICONS['error']} Sorgu kaydedilemedi", COLORS['danger'])
 
     def import_excel(self):
         """Excel dosyasını içe aktar - AYNEN KALIYOR (TÜM KOD KORUNUYOR)"""
@@ -471,14 +477,17 @@ class QueryTab:
         )
 
         if not file_path:
+            self.main.update_status(f"{ICONS['info']} Excel seçimi iptal edildi", COLORS['info'])
             return
 
         try:
+            self.main.update_status(f"{ICONS['info']} Excel sayfaları okunuyor...", COLORS['warning'])
             # Get sheet names
             success, sheet_names = ExcelHandler.get_sheet_names(file_path)
 
             if not success:
                 messagebox.showerror(f"{ICONS['error']} Hata", sheet_names)
+                self.main.update_status(f"{ICONS['error']} Excel okunamadı", COLORS['danger'])
                 return
 
             # If multiple sheets, let user choose
@@ -512,15 +521,18 @@ class QueryTab:
         except Exception as e:
             messagebox.showerror(f"{ICONS['error']} Hata",
                                f"Excel okunamadı:\n{str(e)}")
+            self.main.update_status(f"{ICONS['error']} Excel okunamadı", COLORS['danger'])
 
     def _do_excel_import(self, file_path, sheet_name):
         """Excel import işlemini gerçekleştir - AYNEN KALIYOR"""
         try:
+            self.main.update_status(f"{ICONS['info']} Excel '{sheet_name}' içe aktarılıyor...", COLORS['warning'])
             # Import Excel
             success, df = ExcelHandler.import_excel(file_path, sheet_name)
 
             if not success:
                 messagebox.showerror(f"{ICONS['error']} Hata", df)
+                self.main.update_status(f"{ICONS['error']} Excel içe aktarımı başarısız", COLORS['danger'])
                 return
 
             # Ask for table name
@@ -576,6 +588,7 @@ class QueryTab:
             self.main.root.wait_window(mode_dialog)
 
             if not result.get('confirmed'):
+                self.main.update_status(f"{ICONS['info']} Excel içe aktarma iptal edildi", COLORS['info'])
                 return
 
             # Import to database
@@ -592,12 +605,14 @@ class QueryTab:
                               f"📊 Satır: {len(df):,}\n"
                               f"📊 Sütun: {len(df.columns)}\n"
                               f"🔧 Mod: {mode_text.upper()}")
+            self.main.update_status(f"{ICONS['success']} Excel içe aktarıldı", COLORS['success'])
 
             self.main.refresh_all()
 
         except Exception as e:
             messagebox.showerror(f"{ICONS['error']} Hata",
                                f"Excel içe aktarılamadı:\n{str(e)}")
+            self.main.update_status(f"{ICONS['error']} Excel içe aktarımı başarısız", COLORS['danger'])
 
     def update_db_combo(self):
         """Veritabanı listesini güncelle - AYNEN KALIYOR"""
