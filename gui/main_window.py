@@ -6,6 +6,7 @@ Uygulamanın ana GUI yapısı
 import tkinter as tk
 from tkinter import ttk, messagebox
 import os
+import traceback
 
 # Config
 from config.settings import *
@@ -24,6 +25,7 @@ from gui.tabs.my_queries_tab import MyQueriesTab
 
 # GUI Widgets
 from gui.widgets.toolbar import Toolbar
+from gui.widgets.loading_screen import LoadingScreen
 
 
 class MainWindow:
@@ -38,19 +40,26 @@ class MainWindow:
         if os.name == 'nt':  # Windows
             self.root.state('zoomed')
 
-        # Core components
-        self.db_manager = DatabaseManager()
-        self.query_executor = QueryExecutor(self.db_manager)
-        self.saved_queries = SavedQueriesManager()
+        # placeholders for components
+        self.db_manager = None
+        self.query_executor = None
+        self.saved_queries = None
+        self.toolbar = None
+        self.notebook = None
+        self.status_label = None
+        self.query_tab = None
+        self.my_queries_tab = None
+        self.databases_tab = None
+        self.tables_tab = None
+        self.editor_tab = None
 
-        # Style configuration
-        self.setup_style()
-
-        # GUI setup
-        self.setup_gui()
+        # splash screen
+        self.root.withdraw()
+        self.loading_screen = LoadingScreen(self.root)
 
         # Pencere kapatma eventi
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.root.after(100, self.bootstrap_application)
 
     def setup_style(self):
         """Tkinter style ayarları"""
@@ -139,6 +148,9 @@ class MainWindow:
 
     def update_status(self, message: str, color: str = None):
         """Durum mesajını güncelle"""
+        if not self.status_label:
+            return
+
         if color:
             self.status_label.config(text=message, fg=color)
         else:
@@ -148,6 +160,10 @@ class MainWindow:
 
     def refresh_all(self):
         """Tüm sekmeleri yenile"""
+        if not all([self.toolbar, self.databases_tab, self.tables_tab,
+                    self.editor_tab, self.query_tab]):
+            return
+
         self.toolbar.update_info()
         self.databases_tab.refresh()
         self.tables_tab.refresh()
@@ -168,3 +184,69 @@ class MainWindow:
     def run(self):
         """Uygulamayı başlat"""
         self.root.mainloop()
+
+    def bootstrap_application(self):
+        """Yükleme ekranı eşliğinde uygulamayı başlat."""
+        try:
+            self._update_loading("Çekirdek servisler hazırlanıyor...", 15,
+                                 "Veritabanı yöneticisi etkinleştiriliyor")
+            self.db_manager = DatabaseManager()
+
+            self._update_loading("Sorgu motoru optimize ediliyor...", 35,
+                                 "Önbellek stratejileri uygulanıyor")
+            self.query_executor = QueryExecutor(self.db_manager)
+
+            self._update_loading("Kayıtlı sorgular yükleniyor...", 55,
+                                 "Favori şablonlar taranıyor")
+            self.saved_queries = SavedQueriesManager()
+
+            self._update_loading("Arayüz temaları uygulanıyor...", 70,
+                                 "Kurumsal stil bileşenleri hazırlanıyor")
+            self.setup_style()
+
+            self._update_loading("Modüler paneller oluşturuluyor...", 90,
+                                 "Sekmeler ve araç çubuğu yapılandırılıyor")
+            self.setup_gui()
+
+            self._update_loading("Son kontroller...", 100,
+                                 "Performans metrikleri doğrulanıyor")
+
+            if self.loading_screen:
+                self.loading_screen.finish(self._on_loading_complete)
+            else:
+                self._on_loading_complete()
+        except Exception as exc:
+            self._handle_boot_error(exc)
+
+    def _update_loading(self, message: str, progress: int | None = None, detail: str | None = None):
+        if self.loading_screen:
+            self.loading_screen.update_status(message, progress, detail)
+
+    def _on_loading_complete(self):
+        self.loading_screen = None
+        self._show_main_window()
+
+    def _show_main_window(self):
+        self.root.deiconify()
+        try:
+            self.root.attributes('-alpha', 0.0)
+
+            def fade(alpha=0.0):
+                try:
+                    self.root.attributes('-alpha', alpha)
+                except tk.TclError:
+                    return
+                if alpha < 1.0:
+                    self.root.after(20, lambda: fade(alpha + 0.1))
+            fade()
+        except tk.TclError:
+            pass
+
+    def _handle_boot_error(self, exc: Exception):
+        if self.loading_screen:
+            self.loading_screen.force_close()
+
+        traceback.print_exc()
+        messagebox.showerror("Başlatma Hatası",
+                             f"Uygulama başlatılırken bir hata oluştu:\n{exc}")
+        self.root.destroy()
