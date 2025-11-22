@@ -29,8 +29,13 @@ from gui.widgets.toolbar import Toolbar
 class MainWindow:
     """Ana uygulama penceresi"""
 
-    def __init__(self):
-        self.root = tk.Tk()
+    def __init__(self, root=None):
+        """Ana uygulama penceresi"""
+        if root:
+            self.root = root
+        else:
+            self.root = tk.Tk()
+            
         self.root.title(WINDOW_TITLE)
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
 
