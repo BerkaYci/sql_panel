@@ -24,6 +24,7 @@ from gui.tabs.my_queries_tab import MyQueriesTab
 
 # GUI Widgets
 from gui.widgets.toolbar import Toolbar
+from gui.widgets.loading_screen import LoadingScreen
 
 
 class MainWindow:
@@ -38,19 +39,12 @@ class MainWindow:
         if os.name == 'nt':  # Windows
             self.root.state('zoomed')
 
-        # Core components
-        self.db_manager = DatabaseManager()
-        self.query_executor = QueryExecutor(self.db_manager)
-        self.saved_queries = SavedQueriesManager()
+        # Başlatma sırasında ana pencereyi gizle
+        self.root.withdraw()
+        self.loading_screen = LoadingScreen(self.root)
 
-        # Style configuration
-        self.setup_style()
-
-        # GUI setup
-        self.setup_gui()
-
-        # Pencere kapatma eventi
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        # Asenkron bootstrap akışı
+        self.root.after(80, self._bootstrap)
 
     def setup_style(self):
         """Tkinter style ayarları"""
@@ -136,6 +130,43 @@ class MainWindow:
             font=FONTS['normal']
         )
         self.status_label.pack(side="left", padx=20, pady=5)
+
+    def _bootstrap(self):
+        """Çekirdek servisleri ve GUI öğelerini ardışık olarak hazırla."""
+        try:
+            self.loading_screen.update_stage("Çekirdek servisler hazırlanıyor", 15)
+            self.db_manager = DatabaseManager()
+            self.query_executor = QueryExecutor(self.db_manager)
+            self.saved_queries = SavedQueriesManager()
+
+            self.loading_screen.update_stage("Arayüz stilleri yükleniyor", 40)
+            self.setup_style()
+
+            self.loading_screen.update_stage("Sekmeler ve bileşenler oluşturuluyor", 75)
+            self.setup_gui()
+
+            self.loading_screen.update_stage("Son kontroller yapılıyor", 90)
+            self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+            self.loading_screen.finish(callback=self._reveal_main_window)
+        except Exception as exc:
+            if self.loading_screen:
+                self.loading_screen.force_close()
+            messagebox.showerror("Başlatma Hatası", f"Uygulama başlatılamadı:\n{exc}")
+            self.root.destroy()
+            raise
+
+    def _reveal_main_window(self):
+        """Loading ekranı kapandıktan sonra pencereyi göster."""
+        self.loading_screen = None
+        self.root.deiconify()
+        try:
+            # Ön plana alıp normal duruma döndür
+            self.root.attributes("-topmost", True)
+            self.root.after(200, lambda: self.root.attributes("-topmost", False))
+        except tk.TclError:
+            pass
+        self.root.focus_force()
 
     def update_status(self, message: str, color: str = None):
         """Durum mesajını güncelle"""
