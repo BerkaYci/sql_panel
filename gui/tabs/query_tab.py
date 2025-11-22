@@ -18,6 +18,7 @@ from utils.performance_optimizer import (
 from config.settings import *
 from utils.excel_handler import ExcelHandler
 from utils.csv_handler import CSVHandler
+from gui.widgets.loading_screen import LoadingScreen
 
 
 class QueryTab:
@@ -226,10 +227,24 @@ class QueryTab:
         # 🚀 Performans monitörü başlat
         self.performance_monitor.start_timer()
 
+        # Loading screen göster
+        loading_screen = LoadingScreen(
+            self.main.root,
+            message=f"SQL sorgusu çalıştırılıyor...\n\nVeritabanı: {db_alias}",
+            show_progress=False,
+            cancelable=False
+        )
+        self.main.root.update()
+
         # Execute query
         self.main.update_status(f"{ICONS['info']} Sorgu çalıştırılıyor...", COLORS['warning'])
 
-        success, result, message = self.main.query_executor.execute(query, db_alias)
+        try:
+            success, result, message = self.main.query_executor.execute(query, db_alias)
+        finally:
+            # Loading screen'i kapat
+            loading_screen.close()
+            self.main.root.update()
 
         if success:
             if result['type'] == 'select':
@@ -418,13 +433,27 @@ class QueryTab:
         )
 
         if file_path:
-            self.main.update_status(f"{ICONS['info']} Excel aktarımı başlatılıyor...", COLORS['warning'])
-            success, message = ExcelHandler.export_to_excel(
-                self.current_results['rows'],
-                self.current_results['columns'],
-                file_path,
-                styled=True
+            # Loading screen göster
+            loading_screen = LoadingScreen(
+                self.main.root,
+                message=f"Excel'e aktarılıyor...\n\nDosya: {file_path}\nSatır sayısı: {len(self.current_results['rows']):,}",
+                show_progress=False,
+                cancelable=False
             )
+            self.main.root.update()
+
+            self.main.update_status(f"{ICONS['info']} Excel aktarımı başlatılıyor...", COLORS['warning'])
+            
+            try:
+                success, message = ExcelHandler.export_to_excel(
+                    self.current_results['rows'],
+                    self.current_results['columns'],
+                    file_path,
+                    styled=True
+                )
+            finally:
+                loading_screen.close()
+                self.main.root.update()
 
             if success:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı",

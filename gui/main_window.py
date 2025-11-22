@@ -24,6 +24,7 @@ from gui.tabs.my_queries_tab import MyQueriesTab
 
 # GUI Widgets
 from gui.widgets.toolbar import Toolbar
+from gui.widgets.loading_screen import LoadingScreen
 
 
 class MainWindow:
@@ -38,16 +39,41 @@ class MainWindow:
         if os.name == 'nt':  # Windows
             self.root.state('zoomed')
 
-        # Core components
+        # Loading screen göster (başlangıç)
+        self.loading_screen = LoadingScreen(
+            self.root,
+            message="Uygulama başlatılıyor...",
+            show_progress=False,
+            cancelable=False
+        )
+        self.root.update()
+
+        # Core components (yükleme sırasında)
+        self.loading_screen.update_message("Veritabanı yöneticisi yükleniyor...")
+        self.root.update()
         self.db_manager = DatabaseManager()
+        
+        self.loading_screen.update_message("Sorgu çalıştırıcı hazırlanıyor...")
+        self.root.update()
         self.query_executor = QueryExecutor(self.db_manager)
+        
+        self.loading_screen.update_message("Kaydedilmiş sorgular yükleniyor...")
+        self.root.update()
         self.saved_queries = SavedQueriesManager()
 
         # Style configuration
+        self.loading_screen.update_message("Arayüz stilleri yükleniyor...")
+        self.root.update()
         self.setup_style()
 
         # GUI setup
+        self.loading_screen.update_message("Arayüz bileşenleri oluşturuluyor...")
+        self.root.update()
         self.setup_gui()
+
+        # Loading screen'i kapat
+        self.loading_screen.close()
+        self.root.update()
 
         # Pencere kapatma eventi
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)

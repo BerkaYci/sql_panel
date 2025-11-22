@@ -8,6 +8,7 @@ from tkinter import ttk, filedialog, simpledialog, messagebox
 import os
 
 from config.settings import *
+from gui.widgets.loading_screen import LoadingScreen
 
 
 class Toolbar:
@@ -138,7 +139,20 @@ class Toolbar:
             if not alias:
                 return
 
-            success, message = self.main.db_manager.create_database(db_path, alias)
+            # Loading screen göster
+            loading_screen = LoadingScreen(
+                self.main.root,
+                message=f"Veritabanı oluşturuluyor...\n\nYol: {db_path}\nTakma ad: {alias}",
+                show_progress=False,
+                cancelable=False
+            )
+            self.main.root.update()
+
+            try:
+                success, message = self.main.db_manager.create_database(db_path, alias)
+            finally:
+                loading_screen.close()
+                self.main.root.update()
 
             if success:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı", message)
@@ -169,7 +183,20 @@ class Toolbar:
                 if not replace:
                     return
 
-            success, message = self.main.db_manager.open_database(db_path, alias, replace)
+            # Loading screen göster
+            loading_screen = LoadingScreen(
+                self.main.root,
+                message=f"Veritabanı açılıyor...\n\nYol: {db_path}\nTakma ad: {alias}",
+                show_progress=False,
+                cancelable=False
+            )
+            self.main.root.update()
+
+            try:
+                success, message = self.main.db_manager.open_database(db_path, alias, replace)
+            finally:
+                loading_screen.close()
+                self.main.root.update()
 
             if success:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı", message)
@@ -196,7 +223,20 @@ class Toolbar:
             if not alias:
                 return
 
-            success, message = self.main.db_manager.attach_database(db_path, alias)
+            # Loading screen göster
+            loading_screen = LoadingScreen(
+                self.main.root,
+                message=f"Veritabanı bağlanıyor...\n\nYol: {db_path}\nTakma ad: {alias}",
+                show_progress=False,
+                cancelable=False
+            )
+            self.main.root.update()
+
+            try:
+                success, message = self.main.db_manager.attach_database(db_path, alias)
+            finally:
+                loading_screen.close()
+                self.main.root.update()
 
             if success:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı",

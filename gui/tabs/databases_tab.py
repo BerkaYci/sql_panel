@@ -8,6 +8,7 @@ from tkinter import ttk, messagebox
 import os
 
 from config.settings import *
+from gui.widgets.loading_screen import LoadingScreen
 
 
 class DatabasesTab:
@@ -245,7 +246,20 @@ SELECT name, 'attached' as db FROM attached_db.sqlite_master WHERE type='table';
         )
 
         if backup_path:
-            success, message = self.main.db_manager.backup_database(alias, backup_path)
+            # Loading screen göster
+            loading_screen = LoadingScreen(
+                self.main.root,
+                message=f"Veritabanı yedekleniyor...\n\nVeritabanı: {alias}\nHedef: {backup_path}",
+                show_progress=False,
+                cancelable=False
+            )
+            self.main.root.update()
+
+            try:
+                success, message = self.main.db_manager.backup_database(alias, backup_path)
+            finally:
+                loading_screen.close()
+                self.main.root.update()
 
             if success:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı", message)
@@ -266,7 +280,20 @@ SELECT name, 'attached' as db FROM attached_db.sqlite_master WHERE type='table';
         if messagebox.askyesno(f"{ICONS['warning']} Onay",
                                f"'{alias}' veritabanını optimize etmek istiyor musunuz?\n"
                                f"Bu işlem zaman alabilir."):
-            success, message = self.main.db_manager.vacuum_database(alias)
+            # Loading screen göster
+            loading_screen = LoadingScreen(
+                self.main.root,
+                message=f"Veritabanı optimize ediliyor...\n\nVeritabanı: {alias}\n\nBu işlem biraz zaman alabilir.",
+                show_progress=False,
+                cancelable=False
+            )
+            self.main.root.update()
+
+            try:
+                success, message = self.main.db_manager.vacuum_database(alias)
+            finally:
+                loading_screen.close()
+                self.main.root.update()
 
             if success:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı", message)
