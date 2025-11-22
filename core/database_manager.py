@@ -142,6 +142,7 @@ class DatabaseManager:
             return None
 
         db_info = self.connections[alias].copy()
+        db_info['alias'] = alias
 
         try:
             # Dosya boyutu
@@ -166,7 +167,12 @@ class DatabaseManager:
 
     def get_all_database_info(self) -> List[Dict]:
         """Tüm veritabanlarının bilgilerini getir"""
-        return [self.get_database_info(alias) for alias in self.connections.keys()]
+        all_info = []
+        for alias in self.connections.keys():
+            info = self.get_database_info(alias)
+            if info:
+                all_info.append(info)
+        return all_info
 
     def get_tables(self, alias: Optional[str] = None) -> List[str]:
         """Veritabanındaki tabloları listele"""

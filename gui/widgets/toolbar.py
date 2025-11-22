@@ -245,40 +245,59 @@ class Toolbar:
         for widget in self.db_info_frame.winfo_children():
             widget.destroy()
 
-        connections = self.main.db_manager.connections
+        db_infos = self.main.db_manager.get_all_database_info()
 
-        if connections:
-            tk.Label(self.db_info_frame, text=f"{ICONS['connect']} Bağlı Veritabanları:",
-                    bg=COLORS['bg_dark'], fg=COLORS['text_white'],
-                    font=FONTS['subtitle']).pack(anchor="w")
+        if db_infos:
+            tk.Label(
+                self.db_info_frame,
+                text=f"{ICONS['connect']} Bağlı Veritabanları:",
+                bg=COLORS['bg_dark'],
+                fg=COLORS['text_white'],
+                font=FONTS['subtitle']
+            ).pack(anchor="w")
 
-            for db_info in self.main.db_manager.get_all_database_info():
-                alias = list(self.main.db_manager.connections.keys())[
-                    list(self.main.db_manager.connections.values()).index(
-                        {k:v for k,v in self.main.db_manager.connections.items()
-                         if v['path'] == db_info['path']}.popitem()[1]
-                    )
-                ]
+            for info in db_infos:
+                alias = info.get('alias', '?')
+                is_active = "🟢" if info.get('is_active') else "⚪"
 
-                is_active = "🟢" if db_info['is_active'] else "⚪"
+                size_bytes = info.get('size')
+                if size_bytes is not None:
+                    size_kb = size_bytes / 1024
+                    size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
+                else:
+                    size_str = "?"
 
-                size = db_info.get('size', 0) / 1024
-                size_str = f"{size:.1f} KB" if size < 1024 else f"{size/1024:.1f} MB"
+                table_count = info.get('table_count', '?')
+                filename = info.get('filename', os.path.basename(info.get('path', '')))
+                info_text = (
+                    f"{is_active} {alias}: {filename or info.get('path', 'Bilinmiyor')}"
+                    f" ({size_str}, {table_count} tablo)"
+                )
 
-                info_text = f"{is_active} {alias}: {db_info['filename']} ({size_str})"
+                if info.get('error'):
+                    info_text += f" • Hata: {info['error']}"
 
-                tk.Label(self.db_info_frame, text=info_text,
-                        bg=COLORS['bg_dark'], fg=COLORS['text_light'],
-                        font=FONTS['small']).pack(anchor="w")
-
-            # Update combo
-            db_list = self.main.db_manager.get_database_list()
-            self.active_db_combo['values'] = db_list
-            if self.main.db_manager.active_db:
-                self.active_db_combo.set(self.main.db_manager.active_db)
+                tk.Label(
+                    self.db_info_frame,
+                    text=info_text,
+                    bg=COLORS['bg_dark'],
+                    fg=COLORS['text_light'],
+                    font=FONTS['small']
+                ).pack(anchor="w")
         else:
-            tk.Label(self.db_info_frame, text=f"{ICONS['error']} Bağlı veritabanı yok",
-                    bg=COLORS['bg_dark'], fg=COLORS['danger'],
-                    font=FONTS['subtitle']).pack()
-            self.active_db_combo['values'] = []
+            tk.Label(
+                self.db_info_frame,
+                text=f"{ICONS['error']} Bağlı veritabanı yok",
+                bg=COLORS['bg_dark'],
+                fg=COLORS['danger'],
+                font=FONTS['subtitle']
+            ).pack()
+
+        # Update combo regardless of state
+        db_list = self.main.db_manager.get_database_list()
+        self.active_db_combo['values'] = db_list
+
+        if self.main.db_manager.active_db:
+            self.active_db_combo.set(self.main.db_manager.active_db)
+        elif not db_list:
             self.active_db_combo.set("")

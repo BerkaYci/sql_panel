@@ -223,6 +223,7 @@ class EditorTab:
                                  "Veritabanı ve tablo seçin!")
             return
 
+        self.main.update_status(f"{ICONS['info']} '{table_name}' tablosu yükleniyor...", COLORS['warning'])
         # 🚀 Performans monitörü başlat
         self.performance_monitor.start_timer()
 
@@ -249,6 +250,7 @@ class EditorTab:
                 )
 
                 if not response:
+                    self.main.update_status(f"{ICONS['info']} Tablo yükleme iptal edildi", COLORS['info'])
                     return
 
             # Get table structure
@@ -322,10 +324,12 @@ class EditorTab:
             else:
                 messagebox.showinfo(f"{ICONS['success']} Başarılı",
                                   f"{total_rows:,} kayıt yüklendi")
+            self.main.update_status(f"{ICONS['success']} '{table_name}' tablosu yüklendi", COLORS['success'])
 
         except Exception as e:
             messagebox.showerror(f"{ICONS['error']} Hata",
                                f"Yükleme hatası:\n{str(e)}")
+            self.main.update_status(f"{ICONS['error']} Tablo yüklenemedi", COLORS['danger'])
 
     def _load_page(self, page: int, conn, table_name: str, col_names: List[str]):
         """Belirli bir sayfayı yükle"""
@@ -664,16 +668,19 @@ class EditorTab:
         )
 
         if not file_path:
+            self.main.update_status(f"{ICONS['info']} Toplu güncelleme iptal edildi", COLORS['info'])
             return
 
         try:
             from utils.excel_handler import ExcelHandler
 
             # Excel'i oku
+            self.main.update_status(f"{ICONS['info']} Excel okunuyor...", COLORS['warning'])
             success, df = ExcelHandler.import_excel(file_path)
 
             if not success:
                 messagebox.showerror(f"{ICONS['error']} Hata", df)
+                self.main.update_status(f"{ICONS['error']} Excel okunamadı", COLORS['danger'])
                 return
 
             # id sütunu var mı kontrol et
@@ -820,6 +827,7 @@ class EditorTab:
                               f"📊 Güncellenen: {updated_count} kayıt\n"
                               f"⚠️ Bulunamayan: {not_found_count} kayıt\n"
                               f"📝 Güncellenen Sütunlar: {', '.join(selected_columns)}")
+            self.main.update_status(f"{ICONS['success']} Toplu güncelleme tamamlandı", COLORS['success'])
 
             # 🚀 Cache'i temizle ve tabloyu yeniden yükle
             self.cache.clear()
@@ -828,6 +836,7 @@ class EditorTab:
         except Exception as e:
             messagebox.showerror(f"{ICONS['error']} Hata",
                                f"Toplu güncelleme hatası:\n{str(e)}")
+            self.main.update_status(f"{ICONS['error']} Toplu güncelleme başarısız", COLORS['danger'])
 
     def refresh(self):
         """Sekmeyi yenile - AYNEN KALIYOR"""
